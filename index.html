@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ziz to Wix for Denis</title>
+    <style>
+        #input_text {
+            display: block;
+            width: 100%;
+            height: 300px;
+        }
+
+        #convert_btn, #copy_btn {
+            width: 100%;
+            font-size: 30px;
+        }
+
+        #result {
+            display: block;
+            width: 100%;
+            border: 1px dashed red;
+            min-height: 200px;
+        }
+    </style>
+</head>
+<body>
+    <textarea id="input_text"></textarea>
+    <input id="len_cheker_cb" type="checkbox"><label for="len_cheker_cb">check name langth &gt; 80</label><br>
+    <input id="autoreplace_ziz_cb" type="checkbox"><label for="autoreplace_ziz_cb">autodelete "ZIZ " in names</label><br>
+    <label for="invetory_num">inventory </label><input id="invetory_num" type="number" value="1"><br>
+    <input id="visible_cb" type="checkbox" checked="checked"><label for="visible_cb">Visible TRUE/FALSE</label>
+    <input id="convert_btn" type="button" value="convert">
+    <textarea id="result"></textarea>
+    <script>
+
+const inputText = document.getElementById('input_text')
+const lenCheckerCb = document.getElementById('len_cheker_cb')
+const autoreplaceZizCb = document.getElementById('autoreplace_ziz_cb')
+const invetoryNum = document.getElementById('invetory_num')
+const visibleCb = document.getElementById('visible_cb')
+const convertBtn = document.getElementById('convert_btn')
+const resultBlock = document.getElementById('result')
+
+const arrayToCSV = (objArray) => {
+
+    const array = typeof objArray !== 'object' ? JSON.parse(objArray) : objArray
+    let str = `${Object.keys(array[0]).map(value => `${value}`).join(",")}` + '\r\n'
+
+    return array.reduce((str, next) => {
+        str += `${Object.values(next).map(value => `"${value}"`).join(",")}` + '\r\n'
+        return str
+       }, str);
+}
+
+const createLineObject = (handleId='', fieldType='Product', name='', description='',
+                productImageUrl='', collection='', sku='', ribbon='',
+                price='', surcharge='', visible='TRUE', inventory='1') => 
+                    ({handleId, fieldType, name, description,
+                        productImageUrl, collection, sku, ribbon,
+                        price, surcharge, visible, inventory})
+
+let linesArr = []
+
+convertBtn.addEventListener('click',()=>{
+try {
+    const visibleNow = visibleCb.checked ? 'TRUE' : 'FALSE'
+    const inventoryNow = invetoryNum.value
+    const xml = inputText.value
+    const oParser = new DOMParser()
+    const oDom = oParser.parseFromString(xml, "application/xml")
+    const offers = oDom.querySelectorAll('offer')
+    const offers_len = offers.length;
+    offers.forEach((offer,i)=>{
+        const line = createLineObject()
+        // line.handleId = 'Product_'+offer.id
+        line.handleId = `Product_${offer.id}`
+        line.name = offer.querySelector('name').textContent
+        if (autoreplaceZizCb.checked) {
+            line.name = line.name.replace(new RegExp('ZIZ ', 'g'), '')
+        }
+        while ( lenCheckerCb.checked == true && line.name.length>80) {
+            line.name = prompt(`${i+1}/${offers_len} [${line.name.length}]: ${line.name}`,line.name)
+            // line.name = line.name.substring(0,75)+'...'
+        }
+        line.description = offer.querySelector('description').textContent
+        line.productImageUrl = (()=>{
+            let tmp = []
+            offer.querySelectorAll('picture').forEach((el)=>{
+                tmp.push(el.textContent)
+            })
+            return tmp.join(';')
+        })()
+        line.price = offer.querySelector('price').textContent
+
+        line.visible = visibleNow;
+        line.inventory = inventoryNow;
+
+        linesArr.push(line)
+    })
+    globalTest = linesArr
+    resultBlock.value = arrayToCSV(linesArr)
+
+}
+catch (exc) {
+    console.log(exc)
+    prompt('error!',exc)
+}
+})
+
+
+    </script>
+</body>
+</html>
